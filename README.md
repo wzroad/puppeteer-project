@@ -6,7 +6,7 @@
 
 ## 本地运行
 
-本地运行请确保已经安装了 Postgres！
+本地运行请确保已经安装了 Postgres，并创建一个数据库。
 
 在根目录下新建`.env`文件，将根目录下`env.example`文件中的变量复制到`.env`文件中，并补充上正确的值。
 
@@ -20,4 +20,16 @@
 
 ```bash
 npm install
+
+npx prisma db push # 同步表结构
+
+npx prisma generate # 生成 Prisma Client
+
+npm run start
 ```
+
+## 使用 GitHub Action 运行
+
+`Fork` 本项目，在项目`Setting` -> `Secrects and variables` -> `action` 中添加`POSTGRES_PRISMA_URL`和`POSTGRES_URL_NON_POOLING`两个变量。
+
+在项目 Actions tab 下点击 Run workflow 运行即可。
