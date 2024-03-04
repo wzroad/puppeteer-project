@@ -9,31 +9,36 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("POSTGRES_PRISMA_URL") // uses connection pooling
-  directUrl = env("POSTGRES_URL_NON_POOLING") // uses a direct connection
+  // provider  = "postgresql"
+  provider = "mysql"
+  url      = env("POSTGRES_PRISMA_URL") // uses connection pooling
+  // directUrl = env("POSTGRES_URL_NON_POOLING") // uses a direct connection
 }
 
 model Subject {
-  id           String      @id
-  url          String?
-  title        String?
-  year         String?
-  cover        String?
-  summary      String?     @db.VarChar(1000)
-  rating       String?
-  pictures     String?     @db.VarChar(1000)
-  director     String?
-  screenwriter String?
-  starring     String?     @db.VarChar(1000)
-  celebrity    Celebrity[]
-  type         String?
-  area         String?
-  language     String?
-  releaseDate  String?
-  duration     String?
-  alias        String?
-  IMDb         String?
+  id                    String      @id
+  url                   String?
+  title                 String?
+  year                  String?
+  cover                 String?
+  summary               String?     @db.VarChar(1000)
+  rating                String?
+  pictures              String?     @db.VarChar(1000)
+  director              String?
+  screenwriter          String?
+  starring              String?     @db.VarChar(1000)
+  celebrity             Celebrity[]
+  type                  String?
+  area                  String?
+  language              String?
+  releaseDate           String?
+  duration              String?
+  alias                 String?
+  IMDb                  String?
+  officialWebsite       String?
+  firstBroadcast        String?
+  episodes              String?
+  singleEpisodeDuration String?
 }
 
 model Celebrity {
