@@ -15,8 +15,8 @@ async function main() {
     waitUntil: "networkidle2",
   });
 
-  log("开启网站，等待 1 秒加载数据");
-  await sleep(1000);
+  log("开启网站，等待 2 秒加载数据");
+  await sleep(2000);
 
   const items = await page.$$eval("a.item", (elements) =>
     elements.map((element) => {
@@ -31,6 +31,8 @@ async function main() {
   }
 
   await movieParse(page, items);
+  // test
+  // await movieParse(page, ["https://movie.douban.com/subject/36754326/"]);
 
   await browser.close();
 }
@@ -63,17 +65,21 @@ const keyMap = {
   片长: "duration",
   又名: "alias",
   IMDb: "IMDb",
+  官方网站: "officialWebsite",
+  首播: "firstBroadcast",
+  集数: "episodes",
+  单集片长: "singleEpisodeDuration",
 };
 
-async function movieParse(page, items) {
+export async function movieParse(page, items) {
   let count = 0;
   for (const url of items) {
     await page.goto(url, {
       waitUntil: "networkidle2",
       timeout: 60000,
     });
-    log(`到达电影详情${url}，等待0.5秒...`);
-    await sleep(500);
+    log(`到达电影详情${url}，等待1秒...`);
+    await sleep(1000);
     try {
       log("开始采集电影信息...");
       const subject = {};
@@ -115,13 +121,33 @@ async function movieParse(page, items) {
 
       const celes = await page.$$eval(".celebrity", (elements) =>
         elements.map((element) => {
+          if (!element.querySelector("a")) {
+            return;
+          }
+          // 优化：如果没有头像，则不保存
+          const avatarElm = element.querySelector(".avatar");
+          let avatar = null;
+          if (avatarElm) {
+            avatar = avatarElm
+              .getAttribute("style")
+              .match(/url\(([^)]+)\)/g)[1];
+            avatar = avatar
+              ? avatar.replace(/url\((['"])?(.*?)\1\)/gi, "$2")
+              : null;
+            if (!avatar) {
+              avatar = avatarElm
+                .getAttribute("style")
+                .match(/url\(([^)]+)\)/g)[0];
+              avatar = avatar
+                ? avatar.replace(/url\((['"])?(.*?)\1\)/gi, "$2")
+                : null;
+            }
+          }
+
           return {
             id: element.querySelector("a").href.match(/celebrity\/(\d+)/)[1],
             name: element.querySelector(".name").textContent,
-            avatar: element
-              .querySelector(".avatar")
-              .getAttribute("style")
-              .match(/url\((.*)\)/)[1],
+            avatar,
             role: element.querySelector(".role").textContent,
             link: element.querySelector("a").href,
           };
@@ -130,13 +156,19 @@ async function movieParse(page, items) {
       const celebrities = [];
       for (let index = 0; index < celes.length; index++) {
         const element = celes[index];
+        if (!element) {
+          continue;
+        }
         const celebrity = await prisma.celebrity.findUnique({
           where: {
             id: element.id,
           },
         });
+        // 如果数据库中已经存在此条数据，则跳过
         if (celebrity) {
-          celebrities.push(celebrity);
+          // subjectId 会报错,不需要保存到数据
+          const { subjectId, ...cdata } = celebrity;
+          celebrities.push(cdata);
           continue;
         }
         celebrities.push(element);
@@ -153,10 +185,20 @@ async function movieParse(page, items) {
         if (!element) {
           continue;
         }
-        const kv = element.split(":");
+        const kv = element.split(": ");
+        // 略过季数
+        if (kv[0] === "季数") {
+          continue;
+        }
         // 有些信息没有值
         if (kv.length < 2) {
           subject[keyMap[kv[0]]] = "未知";
+          continue;
+        }
+        // 有些信息是链接
+        if (kv[1].includes("https")) {
+          log(kv[1]);
+          subject[keyMap[kv[0]]] = kv[1].trim();
           continue;
         }
         // 有些信息是数组
@@ -188,7 +230,8 @@ async function movieParse(page, items) {
       count++;
       log(`数据 ${url} 保存完成，继续采集下一条数据...`);
     } catch (error) {
-      log(`在 ${url} 页发生错误: ${error}，跳过此页`);
+      console.log(error);
+      log(`在 ${url} 页发生错误: 跳过此页`);
       continue;
     }
   }
